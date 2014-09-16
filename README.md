@@ -1,7 +1,7 @@
 Feed Logger
 ===========
 
-`feed_logger.py` is a python script that fetches feeds and stores them in git allowing you to inspect the differnece over time. It is currently very JSON specific, but is intended to be a good base to build on.
+`feed_logger.py` is a python script that fetches feeds and stores them in git allowing you to inspect the difference over time. It is currently very JSON specific, but is intended to be a good base to build on.
 
 `feeds.json` is a simple dictionary containing the feeds to fetch. The key is used to name the directory for each result.
 

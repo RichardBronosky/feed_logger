@@ -13,15 +13,15 @@ from multiprocessing.dummy import Pool as ThreadPool
 # * this script has only been used to store and commit feeds to the current directory and git instance
 PID_DIR = os.path.realpath('pids')
 PID_FILE_FORMAT = os.path.join(PID_DIR, '{name}')
-OUTPUT_DIR_FORMAT = os.path.realpath('{name}')
-OUTPUT_FILE_FORMAT = os.path.join(OUTPUT_DIR_FORMAT, 'feed.json')
+OUTPUT_DIR_FORMAT = os.path.realpath('feeds')
+OUTPUT_FILE_FORMAT = os.path.join(OUTPUT_DIR_FORMAT, '{name}.json')
 
 feeds = json.load(open('feeds.json'))
 
 
 # the last worker commits the changes
 def commit():
-    subprocess.Popen(['git', 'add'] + feeds.keys(), stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
+    subprocess.Popen(['git', 'add', OUTPUT_DIR_FORMAT], stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
     out = subprocess.Popen(['git', 'status', '--porcelain', '-z'], stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
     # grep the porcelain output for staged modifications and commit if any are found
     if len(re.findall('(^|\x00)[AM]', out[0])) > 0:

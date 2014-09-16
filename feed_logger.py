@@ -1,16 +1,19 @@
+#!/usr/bin/env python
+
 import json
 import os
 import re
 import shutil
 import subprocess
 import urllib2
+from functools import partial
 from multiprocessing.dummy import Pool as ThreadPool
 
 # preliminary work for configurable* storage paths
 # * this script has only been used to store and commit feeds to the current directory and git instance
 PID_DIR = os.path.realpath('pids')
-PID_FILE_FORMAT = os.path.join(PID_DIR, '{station}')
-OUTPUT_DIR_FORMAT = os.path.realpath('{station}')
+PID_FILE_FORMAT = os.path.join(PID_DIR, '{name}')
+OUTPUT_DIR_FORMAT = os.path.realpath('{name}')
 OUTPUT_FILE_FORMAT = os.path.join(OUTPUT_DIR_FORMAT, 'feed.json')
 
 feeds = json.load(open('feeds.json'))
@@ -21,16 +24,16 @@ def commit():
     subprocess.Popen(['git', 'add'] + feeds.keys(), stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
     out = subprocess.Popen(['git', 'status', '--porcelain', '-z'], stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
     # grep the porcelain output for staged modifications and commit if any are found
-    if len(re.findall('(^|\x00)M', out[0])) > 0:
+    if len(re.findall('(^|\x00)[AM]', out[0])) > 0:
         subprocess.Popen(['git', 'commit', '--allow-empty-message', '--message', ''], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
 # this is the job all workers do
-def collect(station_url):
+def collect(name, url):
     # get the feed and write it (currently very json specific)
-    json.dump(json.load(urllib2.urlopen(station_url[1])), open(OUTPUT_FILE_FORMAT.format(station=station_url[0]), 'w'), indent=4)
+    json.dump(json.load(urllib2.urlopen(url)), open(OUTPUT_FILE_FORMAT.format(name=name), 'w'), indent=4)
     # touch a file to indicate that the work it complete
-    open(PID_FILE_FORMAT.format(station=station_url[0]), 'a').close()
+    open(PID_FILE_FORMAT.format(name=name), 'a').close()
     # each worker checks to see if it is the last and cleans up after itself if so
     if len([name for name in os.listdir(PID_DIR) if os.path.isfile(os.path.join(PID_DIR, name))]) == len(feeds):
         commit()
@@ -43,8 +46,8 @@ else:
     os.makedirs(PID_DIR)
 
 # Make dirs if they don't exist
-map(lambda directory: os.makedirs(OUTPUT_DIR_FORMAT.format(station=directory)) if not os.path.exists(OUTPUT_DIR_FORMAT.format(station=directory)) else None, feeds.keys())
+map(lambda directory: os.makedirs(OUTPUT_DIR_FORMAT.format(name=directory)) if not os.path.exists(OUTPUT_DIR_FORMAT.format(name=directory)) else None, feeds.keys())
 
 # distribute work over threads
 pool = ThreadPool(4)
-pool.map(collect, [[k, v] for (k, v) in feeds.iteritems()])
+pool.map(partial(apply, collect), feeds.iteritems())
